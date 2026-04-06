@@ -23,9 +23,11 @@ model User {
   // App relations
   ownedBusinesses BusinessOwner[]
   rocks           Rock[]
+  integratedRocks Rock[]          @relation("integrator")
   todos           Todo[]
   meetingSegues   MeetingSegue[]
   segueRatings    MeetingRating[]
+  rockNotes       RockNote[]
 }
 
 model Business {
@@ -59,20 +61,49 @@ model BusinessOwner {
 // ─── Rocks ────────────────────────────────────────────────────────────────────
 
 model Rock {
-  id         String    @id @default(cuid())
-  title      String
-  description String?
-  quarter    Int       // 1-4
-  year       Int
-  done       Boolean   @default(false)
-  businessId String
-  ownerId    String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  title                String
+  description          String?
+  quarter              Int       // 1-4
+  year                 Int
+  done                 Boolean   @default(false)
+  businessId           String
+  ownerId              String
+  integratorId         String?
+  targetCompletionDate DateTime?
+  status               String    @default("not-started") // not-started, in-progress, at-risk, complete
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  owner      User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  business   Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  owner      User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  integrator User?          @relation("integrator", fields: [integratorId], references: [id])
   todos      Todo[]
+  notes      RockNote[]
+  milestones RockMilestone[]
+}
+
+model RockNote {
+  id        String   @id @default(cuid())
+  rockId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  rock   Rock @relation(fields: [rockId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model RockMilestone {
+  id        String    @id @default(cuid())
+  rockId    String
+  title     String
+  startDate DateTime
+  endDate   DateTime
+  done      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  rock Rock @relation(fields: [rockId], references: [id], onDelete: Cascade)
 }
 
 // ─── Todos ────────────────────────────────────────────────────────────────────
