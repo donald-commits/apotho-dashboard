@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { RockToggle } from "@/components/rocks/rock-toggle";
+import { RockLinkItem } from "@/components/rocks/rock-link-item";
 
 interface SearchParams {
   q?: string;
@@ -23,7 +23,7 @@ export default async function MyRocksPage({
 
   const rocks = await prisma.rock.findMany({
     where: { ownerId: session.user.id, quarter: selectedQ, year: selectedYear },
-    include: { business: true },
+    include: { business: true, todos: { select: { id: true, done: true } } },
     orderBy: [{ done: "asc" }, { createdAt: "asc" }],
   });
 
@@ -74,26 +74,15 @@ export default async function MyRocksPage({
           </h2>
           <div className="flex flex-col gap-2">
             {bizRocks.map((rock) => (
-              <div
+              <RockLinkItem
                 key={rock.id}
-                className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                  rock.done ? "bg-muted/50 opacity-70" : "bg-card"
-                }`}
-              >
-                <RockToggle rockId={rock.id} done={rock.done} />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${rock.done ? "line-through text-muted-foreground" : ""}`}>
-                    {rock.title}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                    rock.done ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                  }`}
-                >
-                  {rock.done ? "Done" : "In Progress"}
-                </span>
-              </div>
+                rockId={rock.id}
+                href={`/${rock.business.slug}/rocks/${rock.id}`}
+                title={rock.title}
+                done={rock.done}
+                todoDone={rock.todos.filter((t) => t.done).length}
+                todoTotal={rock.todos.length}
+              />
             ))}
           </div>
         </div>

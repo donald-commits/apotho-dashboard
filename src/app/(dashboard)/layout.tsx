@@ -18,7 +18,7 @@ export default async function DashboardLayout({
   return (
     <>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="overflow-hidden">
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <span className="text-sm font-medium text-muted-foreground">

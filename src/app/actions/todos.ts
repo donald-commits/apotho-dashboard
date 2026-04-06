@@ -14,17 +14,21 @@ export async function createTodo(formData: FormData) {
   const dueDateStr = formData.get("dueDate") as string | null;
   const ownerId = (formData.get("ownerId") as string) || session.user.id;
   const meetingId = (formData.get("meetingId") as string) || null;
+  const rockId = (formData.get("rockId") as string) || null;
 
   if (!title || !businessId) throw new Error("Missing required fields");
 
   const dueDate = dueDateStr ? new Date(dueDateStr) : null;
 
   await prisma.todo.create({
-    data: { title, businessId, ownerId, dueDate, meetingId },
+    data: { title, businessId, ownerId, dueDate, meetingId, rockId },
   });
 
   const biz = await prisma.business.findUnique({ where: { id: businessId } });
-  if (biz) revalidatePath(`/${biz.slug}/todos`);
+  if (biz) {
+    revalidatePath(`/${biz.slug}/todos`);
+    if (rockId) revalidatePath(`/${biz.slug}/rocks/${rockId}`);
+  }
   revalidatePath("/my-todos");
 }
 
@@ -38,6 +42,7 @@ export async function toggleTodo(todoId: string) {
   await prisma.todo.update({ where: { id: todoId }, data: { done: !todo.done } });
 
   revalidatePath(`/${todo.business.slug}/todos`);
+  if (todo.rockId) revalidatePath(`/${todo.business.slug}/rocks/${todo.rockId}`);
   revalidatePath("/my-todos");
 }
 
@@ -51,5 +56,6 @@ export async function deleteTodo(todoId: string) {
   await prisma.todo.delete({ where: { id: todoId } });
 
   revalidatePath(`/${todo.business.slug}/todos`);
+  if (todo.rockId) revalidatePath(`/${todo.business.slug}/rocks/${todo.rockId}`);
   revalidatePath("/my-todos");
 }

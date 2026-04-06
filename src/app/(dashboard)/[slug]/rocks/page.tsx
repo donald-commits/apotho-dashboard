@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { RockToggle } from "@/components/rocks/rock-toggle";
 import { AddRockForm } from "@/components/rocks/add-rock-form";
+import { RockLinkItem } from "@/components/rocks/rock-link-item";
 import { ChevronLeftIcon } from "lucide-react";
 
 interface PageProps {
@@ -26,7 +26,7 @@ export default async function BusinessRocksPage({ params, searchParams }: PagePr
 
   const rocks = await prisma.rock.findMany({
     where: { businessId: business.id, quarter: selectedQ, year: selectedYear },
-    include: { owner: true },
+    include: { owner: true, todos: { select: { id: true, done: true } } },
     orderBy: { createdAt: "asc" },
   });
 
@@ -73,27 +73,16 @@ export default async function BusinessRocksPage({ params, searchParams }: PagePr
           <p className="text-sm text-muted-foreground py-4">No rocks for Q{selectedQ} {selectedYear}.</p>
         )}
         {rocks.map((rock) => (
-          <div
+          <RockLinkItem
             key={rock.id}
-            className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-              rock.done ? "bg-muted/50 opacity-70" : "bg-card"
-            }`}
-          >
-            <RockToggle rockId={rock.id} done={rock.done} />
-            <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium ${rock.done ? "line-through text-muted-foreground" : ""}`}>
-                {rock.title}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">{rock.owner.name}</p>
-            </div>
-            <span
-              className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                rock.done ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-              }`}
-            >
-              {rock.done ? "Done" : "In Progress"}
-            </span>
-          </div>
+            rockId={rock.id}
+            href={`/${params.slug}/rocks/${rock.id}`}
+            title={rock.title}
+            ownerName={rock.owner.name}
+            done={rock.done}
+            todoDone={rock.todos.filter((t) => t.done).length}
+            todoTotal={rock.todos.length}
+          />
         ))}
       </div>
 

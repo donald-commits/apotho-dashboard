@@ -72,6 +72,7 @@ model Rock {
 
   business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   owner      User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  todos      Todo[]
 }
 
 // ─── Todos ────────────────────────────────────────────────────────────────────
@@ -84,12 +85,14 @@ model Todo {
   businessId String
   ownerId    String
   meetingId  String?
+  rockId     String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
   business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   owner      User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   meeting    Meeting?  @relation(fields: [meetingId], references: [id])
+  rock       Rock?     @relation(fields: [rockId], references: [id])
 }
 
 // ─── Meetings ─────────────────────────────────────────────────────────────────
