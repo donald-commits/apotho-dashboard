@@ -120,7 +120,7 @@ export function IntegratorBoard({
                 {col.rocks.map((rock) => (
                   <div
                     key={rock.id}
-                    className={`rounded-lg border bg-card p-3 card-interactive ${
+                    className={`rounded-lg border bg-card p-3 shrink-0 card-interactive ${
                       rock.done ? "opacity-60" : ""
                     }`}
                   >
