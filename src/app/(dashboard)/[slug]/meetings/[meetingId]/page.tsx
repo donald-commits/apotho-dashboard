@@ -59,7 +59,7 @@ export default async function MeetingPage({ params }: PageProps) {
           <ChevronLeftIcon className="h-4 w-4 mr-1" />
           Meetings
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight gradient-text">
           Level 10 Meeting &mdash;{" "}
           {new Date(meeting.date).toLocaleDateString("en-US", {
             weekday: "long",

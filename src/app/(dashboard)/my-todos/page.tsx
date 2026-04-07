@@ -38,7 +38,7 @@ export default async function MyTodosPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">My To-Dos</h1>
+        <h1 className="text-3xl font-bold tracking-tight gradient-text">My To-Dos</h1>
         <p className="text-sm text-muted-foreground mt-1">
           {todos.filter((t) => !t.done).length} open items across all businesses
         </p>

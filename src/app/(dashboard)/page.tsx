@@ -26,10 +26,10 @@ export default async function DashboardPage() {
     : 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 animate-fade-in-up">
       {/* Welcome + personal summary */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight gradient-text">
           Welcome, {session?.user?.name ?? "Owner"}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
       {/* Personal quick stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/my-rocks">
-          <Card className="cursor-pointer transition-shadow hover:shadow-md">
+          <Card className="cursor-pointer card-interactive">
             <CardHeader className="flex flex-row items-center gap-2 pb-2">
               <TargetIcon className="h-4 w-4 text-orange-500" />
               <CardTitle className="text-sm font-medium">My Open Rocks</CardTitle>
@@ -52,7 +52,7 @@ export default async function DashboardPage() {
           </Card>
         </Link>
         <Link href="/my-todos">
-          <Card className="cursor-pointer transition-shadow hover:shadow-md">
+          <Card className="cursor-pointer card-interactive">
             <CardHeader className="flex flex-row items-center gap-2 pb-2">
               <CheckSquareIcon className="h-4 w-4 text-blue-500" />
               <CardTitle className="text-sm font-medium">My Open To-Dos</CardTitle>
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
 
             return (
               <Link key={business.id} href={`/${business.slug}`}>
-                <Card className="cursor-pointer transition-shadow hover:shadow-md h-full">
+                <Card className="cursor-pointer card-interactive h-full">
                   <CardHeader className="pb-2">
                     <div className="flex items-start gap-2">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">

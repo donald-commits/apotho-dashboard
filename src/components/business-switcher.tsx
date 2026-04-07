@@ -41,16 +41,16 @@ export function BusinessSwitcher({ businesses }: BusinessSwitcherProps) {
               />
             }
           >
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg gradient-primary text-white shadow-md shadow-primary/20">
               <BuildingIcon className="size-4" />
             </div>
-            <div className="flex flex-col gap-0.5 leading-none">
-              <span className="font-semibold">Apotho</span>
+            <div className="flex flex-col gap-0.5 leading-none text-left">
+              <span className="font-semibold tracking-tight">Apotho</span>
               <span className="text-xs text-sidebar-foreground/60">
-                All Businesses
+                Improvements
               </span>
             </div>
-            <ChevronsUpDownIcon className="ml-auto" />
+            <ChevronsUpDownIcon className="ml-auto opacity-60" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="bottom">
             <DropdownMenuLabel>Businesses</DropdownMenuLabel>

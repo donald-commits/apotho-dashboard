@@ -87,7 +87,7 @@ export default async function IntegratorPage({
     <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Integrator View</h1>
+          <h1 className="text-3xl font-bold tracking-tight gradient-text">Integrator View</h1>
           <p className="text-sm text-muted-foreground">
             All rocks across companies &middot; Q{selectedQ} {selectedYear}
           </p>

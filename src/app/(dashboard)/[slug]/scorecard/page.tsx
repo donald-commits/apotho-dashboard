@@ -59,7 +59,7 @@ export default async function ScorecardPage({ params }: PageProps) {
           <ChevronLeftIcon className="h-4 w-4 mr-1" />
           {business.name}
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Scorecard</h1>
+        <h1 className="text-3xl font-bold tracking-tight gradient-text">Scorecard</h1>
         <p className="text-sm text-muted-foreground mt-1">Weekly KPIs — last 8 weeks</p>
       </div>
 

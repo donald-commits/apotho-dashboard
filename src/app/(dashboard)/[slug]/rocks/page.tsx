@@ -43,7 +43,7 @@ export default async function BusinessRocksPage({ params, searchParams }: PagePr
           <ChevronLeftIcon className="h-4 w-4 mr-1" />
           {business.name}
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Rocks</h1>
+        <h1 className="text-3xl font-bold tracking-tight gradient-text">Rocks</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Q{selectedQ} {selectedYear} &mdash; {doneCount}/{rocks.length} complete
         </p>

@@ -62,7 +62,7 @@ export function IntegratorBoard({
   const progress = totalRocks > 0 ? Math.round((doneRocks / totalRocks) * 100) : 0;
 
   return (
-    <div className="flex flex-col gap-4 flex-1 min-h-0">
+    <div className="flex flex-col gap-4 flex-1 min-h-0 animate-fade-in-up">
       {/* Controls bar */}
       <div className="flex items-center gap-4 shrink-0">
         <select
@@ -105,12 +105,12 @@ export function IntegratorBoard({
               className="flex flex-col h-[420px] bg-muted/30 rounded-lg border min-w-0"
             >
               {/* Column header */}
-              <div className="flex items-center gap-2 px-3 py-2.5 border-b bg-muted/50 rounded-t-lg">
-                <BuildingIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex items-center gap-2 px-3 py-2.5 border-b gradient-primary text-white rounded-t-lg">
+                <BuildingIcon className="h-4 w-4 shrink-0" />
                 <span className="font-semibold text-sm truncate">
                   {col.businessName}
                 </span>
-                <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full shrink-0">
                   {colDone}/{col.rocks.length}
                 </span>
               </div>
@@ -120,7 +120,7 @@ export function IntegratorBoard({
                 {col.rocks.map((rock) => (
                   <div
                     key={rock.id}
-                    className={`rounded-md border bg-card p-3 transition-colors hover:border-primary/40 hover:shadow-sm ${
+                    className={`rounded-lg border bg-card p-3 card-interactive ${
                       rock.done ? "opacity-60" : ""
                     }`}
                   >

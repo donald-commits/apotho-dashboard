@@ -23,7 +23,7 @@ export function RockLinkItem({
 }) {
   return (
     <div
-      className={`flex items-start gap-3 rounded-lg border p-3 transition-colors hover:border-primary/50 hover:shadow-sm ${
+      className={`flex items-start gap-3 rounded-lg border p-3 card-interactive
         done ? "bg-muted/50 opacity-70" : "bg-card"
       }`}
     >

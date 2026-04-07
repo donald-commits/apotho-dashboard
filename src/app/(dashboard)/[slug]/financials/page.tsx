@@ -30,7 +30,7 @@ export default async function FinancialsPage({ params }: PageProps) {
           <ChevronLeftIcon className="h-4 w-4 mr-1" />
           {business.name}
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Financials</h1>
+        <h1 className="text-3xl font-bold tracking-tight gradient-text">Financials</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Revenue and expenses from MACU bank account
         </p>

@@ -40,7 +40,7 @@ export default async function MyRocksPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Rocks</h1>
+        <h1 className="text-3xl font-bold tracking-tight gradient-text">My Rocks</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Q{selectedQ} {selectedYear} &mdash; {doneCount}/{rocks.length} complete
         </p>

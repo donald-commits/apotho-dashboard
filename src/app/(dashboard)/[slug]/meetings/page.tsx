@@ -34,7 +34,7 @@ export default async function MeetingsPage({ params }: PageProps) {
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Meetings</h1>
+            <h1 className="text-3xl font-bold tracking-tight gradient-text">Meetings</h1>
             <p className="text-sm text-muted-foreground mt-1">Level 10 meeting history</p>
           </div>
           <StartMeetingButton businessId={business.id} businessSlug={business.slug} />
@@ -51,7 +51,7 @@ export default async function MeetingsPage({ params }: PageProps) {
       <div className="flex flex-col gap-3">
         {meetings.map((meeting) => (
           <Link key={meeting.id} href={`/${params.slug}/meetings/${meeting.id}`}>
-            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <Card className="cursor-pointer card-interactive">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">

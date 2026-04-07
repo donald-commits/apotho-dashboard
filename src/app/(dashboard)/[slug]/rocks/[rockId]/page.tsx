@@ -65,7 +65,7 @@ export default async function RockDetailPage({
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="text-3xl font-bold tracking-tight gradient-text flex items-center gap-2">
             {rock.done ? (
               <CheckCircleIcon className="h-6 w-6 text-green-600" />
             ) : (

@@ -63,7 +63,7 @@ export default async function BusinessPage({ params }: PageProps) {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{business.name}</h1>
+        <h1 className="text-3xl font-bold tracking-tight gradient-text">{business.name}</h1>
         {business.description && (
           <p className="text-sm text-muted-foreground mt-1">{business.description}</p>
         )}
@@ -83,7 +83,7 @@ export default async function BusinessPage({ params }: PageProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sections.map((s) => (
           <Link key={s.label} href={s.href}>
-            <Card className="cursor-pointer transition-shadow hover:shadow-md h-full">
+            <Card className="cursor-pointer card-interactive h-full">
               <CardHeader className="flex flex-row items-center gap-3 pb-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
                   <s.icon className="h-5 w-5 text-primary" />
