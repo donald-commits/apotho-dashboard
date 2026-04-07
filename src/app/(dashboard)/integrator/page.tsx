@@ -21,12 +21,13 @@ export default async function IntegratorPage({
   const selectedQ = searchParams.q ? parseInt(searchParams.q, 10) : 2;
   const selectedYear = searchParams.year ? parseInt(searchParams.year, 10) : 2026;
 
-  // Get all rocks where this user is integrator, grouped by business
+  // Get all OPEN rocks where this user is integrator, grouped by business
   const rocks = await prisma.rock.findMany({
     where: {
       integratorId: session.user.id,
       quarter: selectedQ,
       year: selectedYear,
+      done: false,
     },
     include: {
       owner: { select: { id: true, name: true } },
@@ -89,9 +90,15 @@ export default async function IntegratorPage({
         <div>
           <h1 className="text-3xl font-bold tracking-tight gradient-text">Integrator View</h1>
           <p className="text-sm text-muted-foreground">
-            All rocks across companies &middot; Q{selectedQ} {selectedYear}
+            Open rocks across companies &middot; Q{selectedQ} {selectedYear}
           </p>
         </div>
+        <a
+          href="/integrator/completed"
+          className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border bg-card text-sm font-medium btn-outline-gold"
+        >
+          View Completed Rocks
+        </a>
       </div>
 
       <IntegratorBoard
