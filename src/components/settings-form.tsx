@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { changePassword, updateProfile } from "@/app/actions/account";
-import { CheckIcon, AlertCircleIcon, UserIcon, LockIcon } from "lucide-react";
+import { requestPasswordReset } from "@/app/actions/password-reset";
+import { CheckIcon, AlertCircleIcon, UserIcon, LockIcon, MailIcon } from "lucide-react";
 
 export function SettingsForm({ userName, userEmail }: { userName: string; userEmail: string }) {
   const [name, setName] = useState(userName);
@@ -16,6 +17,8 @@ export function SettingsForm({ userName, userEmail }: { userName: string; userEm
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pwStatus, setPwStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [pwSaving, setPwSaving] = useState(false);
+  const [resetSending, setResetSending] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   async function handleNameSave(e: React.FormEvent) {
     e.preventDefault();
@@ -132,9 +135,33 @@ export function SettingsForm({ userName, userEmail }: { userName: string; userEm
               {pwStatus.message}
             </div>
           )}
-          <Button type="submit" disabled={pwSaving || !currentPassword || !newPassword || !confirmPassword} className="w-fit">
-            {pwSaving ? "Changing..." : "Change Password"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={pwSaving || !currentPassword || !newPassword || !confirmPassword} className="w-fit">
+              {pwSaving ? "Changing..." : "Change Password"}
+            </Button>
+            <span className="text-xs text-muted-foreground">or</span>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={resetSending || resetSent}
+              onClick={async () => {
+                setResetSending(true);
+                await requestPasswordReset(userEmail);
+                setResetSent(true);
+                setResetSending(false);
+              }}
+              className="w-fit gap-1.5"
+            >
+              <MailIcon className="h-3.5 w-3.5" />
+              {resetSent ? "Reset link sent!" : resetSending ? "Sending..." : "Reset via email"}
+            </Button>
+          </div>
+          {resetSent && (
+            <p className="text-sm text-green-600 flex items-center gap-1.5">
+              <CheckIcon className="h-4 w-4" />
+              Check your email for a password reset link.
+            </p>
+          )}
         </form>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,12 @@ export function SignInForm() {
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Signing in..." : "Sign in"}
           </Button>
+          <Link
+            href="/forgot-password"
+            className="text-sm text-muted-foreground hover:text-foreground text-center"
+          >
+            Forgot password?
+          </Link>
         </form>
       </CardContent>
     </Card>
