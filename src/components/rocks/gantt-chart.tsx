@@ -112,12 +112,11 @@ export function GanttChart({
   const chartMinWidth = `${totalDays * pxPerDay}px`;
 
   function barColor(done: boolean, endDate: string, isTodo?: boolean, killed?: boolean) {
-    const opacity = isTodo ? "/70" : "";
-    if (killed) return `bg-red-400${opacity}`;
-    if (done) return `bg-green-500${opacity}`;
-    if (isTodo && toUTCDay(endDate) < todayMs) return `bg-amber-400${opacity}`;
-    if (toUTCDay(endDate) < todayMs) return `bg-red-400${opacity}`;
-    return `bg-blue-500${opacity}`;
+    if (killed) return isTodo ? "bg-red-400/70" : "bg-red-400";
+    if (done) return isTodo ? "bg-green-500/70" : "bg-green-500";
+    if (isTodo && toUTCDay(endDate) < todayMs) return "bg-amber-400/70";
+    if (toUTCDay(endDate) < todayMs) return isTodo ? "bg-red-400/70" : "bg-red-400";
+    return isTodo ? "bg-blue-500/70" : "bg-blue-500";
   }
 
   function renderBar(item: { id: string; title: string; startDate: string; endDate: string; done: boolean; killed?: boolean }, isTodo: boolean) {
