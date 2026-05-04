@@ -1,4 +1,5 @@
-require("dotenv").config();
+require("dotenv").config(); // loads .env
+require("dotenv").config({ path: ".env.local", override: true }); // loads .env.local (API keys)
 const { Client } = require("pg");
 
 const EVO_KEY = process.env.NOTION_EVO_KEY;
