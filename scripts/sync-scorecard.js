@@ -352,11 +352,7 @@ async function syncSentri(qStart, qEnd) {
 async function main() {
   await db.connect();
 
-  const evoBiz = await db.query("SELECT id FROM \"Business\" WHERE slug = 'evolution-drafting'");
-  const shBiz = await db.query("SELECT id FROM \"Business\" WHERE slug = 'sentri-homes'");
-  await db.query('DELETE FROM "MeasurableEntry" WHERE "measurableId" IN (SELECT id FROM "Measurable" WHERE "businessId" = $1)', [evoBiz.rows[0].id]);
-  await db.query('DELETE FROM "MeasurableEntry" WHERE "measurableId" IN (SELECT id FROM "Measurable" WHERE "businessId" = $1)', [shBiz.rows[0].id]);
-  console.log("Cleared old entries");
+  console.log("Syncing (upsert mode — no data deleted)...");
 
   await syncEvolution("2026-04-01", "2026-06-30");
   await syncSentri("2026-04-01", "2026-06-30");
