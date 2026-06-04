@@ -204,8 +204,8 @@ async function syncEvolution(wStart, wEnd) {
   for (const c of weekClients) {
     const src = (c.leadSource || "").toLowerCase();
     if (src.includes("google") || src === "gmb" || src === "gmb_inbound") leadsGoogle++;
-    else if (src.includes("angi") || src.includes("terraform angie")) leadsAngi++;
-    else if (src === "meta") leadsMeta++;
+    else if (src.includes("angi")) leadsAngi++;
+    else if (src === "meta" || src === "instagram") leadsMeta++;
     else if (src.includes("thumbtack")) leadsThumbtack++;
   }
 

@@ -117,8 +117,8 @@ async function main() {
       if (s === "new" || s === "no_answer" || s === "never_answered") excludeCount++;
       const src = (c.leadSource || "").toLowerCase();
       if (src.includes("google") || src === "gmb" || src === "gmb_inbound") leadsGoogle++;
-      else if (src.includes("angi") || src.includes("terraform angie")) leadsAngi++;
-      else if (src === "meta") leadsMeta++;
+      else if (src.includes("angi")) leadsAngi++;
+      else if (src === "meta" || src === "instagram") leadsMeta++;
       else if (src.includes("thumbtack")) leadsThumbtack++;
     }
     const ar = totalLeads > 0 ? (((totalLeads - excludeCount) / totalLeads) * 100).toFixed(1) : "0";
