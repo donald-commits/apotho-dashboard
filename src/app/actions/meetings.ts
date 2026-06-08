@@ -50,10 +50,25 @@ export async function endMeeting(meetingId: string) {
 
   const dateStr = meeting.date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
-  // Fire-and-forget email sending via Resend
+  // Create in-app notifications for each person with their to-dos
+  const ownerEntries = Array.from(todosByOwner.entries());
+  for (const [userId, { todos }] of ownerEntries) {
+    const todoList = todos.map((t) => `• ${t}`).join("\n");
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: "todo-assigned",
+        title: `Your To-Dos — ${meeting.business.name} Meeting`,
+        body: `From ${dateStr}:\n${todoList}`,
+        href: `/${meeting.business.slug}/meetings/${meetingId}`,
+      },
+    });
+  }
+
+  // Also attempt email via Resend (requires verified domain to send to external recipients)
   try {
     const resendKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.NOTIFICATION_FROM_EMAIL || "Apotho Dashboard <notifications@apotho.com>";
+    const fromEmail = process.env.NOTIFICATION_FROM_EMAIL || "Apotho Dashboard <onboarding@resend.dev>";
     if (resendKey) {
       const { Resend } = await import("resend");
       const resend = new Resend(resendKey);
