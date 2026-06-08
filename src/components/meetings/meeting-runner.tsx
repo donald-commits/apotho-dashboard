@@ -323,19 +323,22 @@ function ScorecardSection({ measurables, weeks }: { measurables: MeasurableData[
 
 function PreviousTodosSection({ todos, rocks, meeting, owners }: { todos: TodoItem[]; rocks: RockData[]; meeting: MeetingData; owners: Owner[] }) {
   const [isPending, startTransition] = useTransition();
+  const [pushedIds, setPushedIds] = useState<Set<string>>(new Set());
 
   function handleToggle(todoId: string) {
     startTransition(() => toggleTodo(todoId));
   }
 
   function handlePush(todo: TodoItem) {
-    // Create a new to-do in this meeting from the previous one
     const fd = new FormData();
     fd.append("title", todo.title);
     fd.append("businessId", meeting.businessId);
     fd.append("meetingId", meeting.id);
     fd.append("ownerId", todo.ownerId);
-    startTransition(() => createTodo(fd));
+    startTransition(async () => {
+      await createTodo(fd);
+      setPushedIds((prev) => new Set(prev).add(todo.id));
+    });
   }
 
   function handleKill(todoId: string) {
@@ -362,44 +365,51 @@ function PreviousTodosSection({ todos, rocks, meeting, owners }: { todos: TodoIt
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">Review to-dos from the previous meeting. <strong>Done</strong> = mark complete, <strong>Push</strong> = carry to new to-dos, <strong>Kill</strong> = move to issues.</p>
 
-      {todos.map((todo) => (
-        <div key={todo.id} className={`flex items-center gap-2 rounded-lg border p-3 ${todo.done ? "bg-muted/50" : ""}`}>
-          <button onClick={() => handleToggle(todo.id)} disabled={isPending} className="shrink-0 disabled:opacity-50" title="Done">
-            {todo.done ? <CheckSquareIcon className="h-5 w-5 text-green-500" /> : <SquareIcon className="h-5 w-5 text-muted-foreground" />}
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className={`text-sm ${todo.done ? "line-through text-muted-foreground" : ""}`}>{todo.title}</p>
-            <p className="text-xs text-muted-foreground">{todo.ownerName}</p>
+      {todos.map((todo) => {
+        const isPushed = pushedIds.has(todo.id);
+        return (
+          <div key={todo.id} className={`flex items-center gap-2 rounded-lg border p-3 ${todo.done ? "bg-muted/50" : isPushed ? "bg-orange-50 border-orange-200" : ""}`}>
+            <button onClick={() => handleToggle(todo.id)} disabled={isPending || isPushed} className="shrink-0 disabled:opacity-50" title="Done">
+              {todo.done ? <CheckSquareIcon className="h-5 w-5 text-green-500" /> : isPushed ? <ArrowRightIcon className="h-5 w-5 text-orange-500" /> : <SquareIcon className="h-5 w-5 text-muted-foreground" />}
+            </button>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm ${todo.done ? "line-through text-muted-foreground" : isPushed ? "line-through text-orange-500" : ""}`}>{todo.title}</p>
+              <p className={`text-xs ${isPushed ? "text-orange-400" : "text-muted-foreground"}`}>{todo.ownerName}{isPushed ? " — pushed to new to-dos" : ""}</p>
+            </div>
+            {!isPushed && (
+              <>
+                <select
+                  value={todo.ownerId}
+                  onChange={(e) => handleOwnerChange(todo.id, e.target.value)}
+                  disabled={isPending}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs shadow-sm max-w-[120px] disabled:opacity-50"
+                >
+                  {owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+                <select
+                  value={todo.rockId ?? ""}
+                  onChange={(e) => handleRockChange(todo.id, e.target.value)}
+                  disabled={isPending}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs shadow-sm max-w-[150px] disabled:opacity-50"
+                >
+                  <option value="">No rock</option>
+                  {rocks.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
+                </select>
+              </>
+            )}
+            {!todo.done && !isPushed && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => handlePush(todo)} disabled={isPending} title="Push to new to-dos" className="h-8 px-2">
+                  <ArrowRightIcon className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleKill(todo.id)} disabled={isPending} title="Kill — move to issues" className="h-8 px-2 text-red-500 hover:text-red-600">
+                  <BanIcon className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
           </div>
-          <select
-            value={todo.ownerId}
-            onChange={(e) => handleOwnerChange(todo.id, e.target.value)}
-            disabled={isPending}
-            className="h-8 rounded-md border border-input bg-background px-2 text-xs shadow-sm max-w-[120px] disabled:opacity-50"
-          >
-            {owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
-          <select
-            value={todo.rockId ?? ""}
-            onChange={(e) => handleRockChange(todo.id, e.target.value)}
-            disabled={isPending}
-            className="h-8 rounded-md border border-input bg-background px-2 text-xs shadow-sm max-w-[150px] disabled:opacity-50"
-          >
-            <option value="">No rock</option>
-            {rocks.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
-          </select>
-          {!todo.done && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => handlePush(todo)} disabled={isPending} title="Push to new to-dos" className="h-8 px-2">
-                <ArrowRightIcon className="h-3.5 w-3.5" />
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => handleKill(todo.id)} disabled={isPending} title="Kill — move to issues" className="h-8 px-2 text-red-500 hover:text-red-600">
-                <BanIcon className="h-3.5 w-3.5" />
-              </Button>
-            </>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
