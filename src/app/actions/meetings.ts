@@ -50,19 +50,26 @@ export async function endMeeting(meetingId: string) {
 
   const dateStr = meeting.date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
-  // Fire-and-forget email sending
-  for (const entry of Array.from(todosByOwner.values())) {
-    const { name, email, todos } = entry;
-    const todoList = todos.map((t) => `• ${t}`).join("\n");
-    try {
-      // Use GWS CLI if available, otherwise skip silently
-      const { exec } = await import("child_process");
-      const body = `Hi ${name},\n\nHere are your to-dos from the ${meeting.business.name} Level 10 Meeting on ${dateStr}:\n\n${todoList}\n\nPlease complete these by next week's meeting.\n\n— Apotho Dashboard`;
-      const subject = `Your To-Dos — ${meeting.business.name} Meeting (${dateStr})`;
-      exec(`GOOGLE_WORKSPACE_CLI_CONFIG_DIR=~/.config/gws-evo gws gmail +send --to "${email}" --subject "${subject}" --body "${body.replace(/"/g, '\\"')}"`, () => {});
-    } catch {
-      // Silently fail — email is best-effort
+  // Fire-and-forget email sending via Resend
+  try {
+    const resendKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.NOTIFICATION_FROM_EMAIL || "Apotho Dashboard <notifications@apotho.com>";
+    if (resendKey) {
+      const { Resend } = await import("resend");
+      const resend = new Resend(resendKey);
+      for (const entry of Array.from(todosByOwner.values())) {
+        const { name, email, todos } = entry;
+        const todoListHtml = todos.map((t) => `<li>${t}</li>`).join("");
+        resend.emails.send({
+          from: fromEmail,
+          to: email,
+          subject: `Your To-Dos — ${meeting.business.name} Meeting (${dateStr})`,
+          html: `<p>Hi ${name},</p><p>Here are your to-dos from the <strong>${meeting.business.name}</strong> Level 10 Meeting on ${dateStr}:</p><ul>${todoListHtml}</ul><p>Please complete these by next week's meeting.</p><p>— Apotho Dashboard</p>`,
+        }).catch(() => {});
+      }
     }
+  } catch {
+    // Silently fail — email is best-effort
   }
 
   revalidatePath(`/${meeting.business.slug}/meetings`);

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2Icon, CircleIcon, CheckSquareIcon, SquareIcon, ChevronRightIcon, ChevronLeftIcon, ArrowRightIcon, BanIcon, ListPlusIcon } from "lucide-react";
+import { CheckCircle2Icon, CircleIcon, CheckSquareIcon, SquareIcon, ChevronRightIcon, ChevronLeftIcon, ArrowRightIcon, BanIcon, ListPlusIcon, ExternalLinkIcon, PlusIcon } from "lucide-react";
+import { createRock } from "@/app/actions/rocks";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ export function MeetingRunner({ meeting, rocks, measurables, scorecardWeeks, pre
             <PreviousTodosSection todos={previousTodos} rocks={rocks} meeting={meeting} owners={owners} />
           )}
           {section === 3 && (
-            <RocksSection rocks={rocks} readOnly={isCompleted} />
+            <RocksSection rocks={rocks} readOnly={isCompleted} businessId={meeting.businessId} businessSlug={businessSlug} owners={owners} />
           )}
           {section === 4 && (
             <IssuesSection meeting={meeting} previousIssues={previousIssues} owners={owners} readOnly={isCompleted} />
@@ -416,12 +417,32 @@ function PreviousTodosSection({ todos, rocks, meeting, owners }: { todos: TodoIt
 
 // ─── Section: Rocks Review ────────────────────────────────────────────────────
 
-function RocksSection({ rocks, readOnly }: { rocks: RockData[]; readOnly: boolean }) {
+function RocksSection({ rocks, readOnly, businessId, businessSlug, owners }: { rocks: RockData[]; readOnly: boolean; businessId: string; businessSlug: string; owners: Owner[] }) {
   const [isPending, startTransition] = useTransition();
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newOwnerId, setNewOwnerId] = useState(owners[0]?.id ?? "");
+
+  function handleAddRock() {
+    if (!newTitle.trim()) return;
+    const now = new Date();
+    const quarter = Math.floor(now.getMonth() / 3) + 1;
+    const fd = new FormData();
+    fd.append("title", newTitle.trim());
+    fd.append("businessId", businessId);
+    fd.append("quarter", String(quarter));
+    fd.append("year", String(now.getFullYear()));
+    fd.append("ownerId", newOwnerId);
+    startTransition(async () => {
+      await createRock(fd);
+      setNewTitle("");
+      setShowAdd(false);
+    });
+  }
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-muted-foreground mb-2">Review rocks — mark Done or Not Done.</p>
+      <p className="text-sm text-muted-foreground mb-2">Review rocks — click to view details, mark Done or Not Done.</p>
       {rocks.length === 0 && (
         <p className="text-sm text-muted-foreground">No rocks for this quarter.</p>
       )}
@@ -448,15 +469,31 @@ function RocksSection({ rocks, readOnly }: { rocks: RockData[]; readOnly: boolea
               )}
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <p className={`text-sm ${rock.done ? "line-through text-muted-foreground" : ""}`}>{rock.title}</p>
-            <p className="text-xs text-muted-foreground">{rock.ownerName}</p>
-          </div>
+          <a href={`/${businessSlug}/rocks/${rock.id}`} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 group">
+            <p className={`text-sm group-hover:underline ${rock.done ? "line-through text-muted-foreground" : ""}`}>{rock.title}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">{rock.ownerName} <ExternalLinkIcon className="h-3 w-3 opacity-0 group-hover:opacity-100" /></p>
+          </a>
           <span className={`text-xs font-medium ${rock.done ? "text-green-600" : "text-orange-600"}`}>
             {rock.done ? "Done" : "Not Done"}
           </span>
         </div>
       ))}
+
+      {!readOnly && !showAdd && (
+        <Button variant="outline" size="sm" onClick={() => setShowAdd(true)} className="self-start mt-1">
+          <PlusIcon className="mr-1 h-4 w-4" /> Add Rock
+        </Button>
+      )}
+      {!readOnly && showAdd && (
+        <div className="flex gap-2 border rounded-lg p-3 mt-1">
+          <Input placeholder="Rock title..." value={newTitle} onChange={(e) => setNewTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddRock()} className="flex-1" />
+          <select value={newOwnerId} onChange={(e) => setNewOwnerId(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm">
+            {owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+          <Button onClick={handleAddRock} disabled={isPending || !newTitle.trim()}>Add</Button>
+          <Button variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Button>
+        </div>
+      )}
     </div>
   );
 }
