@@ -173,7 +173,10 @@ async function syncEvolution(wStart, wEnd) {
   const nextDay = new Date(wEnd + "T00:00:00Z");
   nextDay.setUTCDate(nextDay.getUTCDate() + 1);
   const wEndUTC = nextDay.toISOString().split("T")[0] + "T05:59:59.999Z";
-  const cutoffISO = wStart + "T00:00:00.000Z";
+  // Go back 2 days before week start to ensure we don't miss any edge-case records
+  const cutoffDate = new Date(wStart + "T00:00:00Z");
+  cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 2);
+  const cutoffISO = cutoffDate.toISOString();
 
   // 1. Fetch scorecard for jobs/upsells/turnaround (complex server-side logic)
   console.log(`  Fetching Victor scorecard...`);
@@ -335,7 +338,7 @@ async function main() {
 
   console.log("Syncing (upsert mode — no data deleted)...");
 
-  // Only sync the current week. Historical data is already accurate.
+  // Sync current week AND previous week (data can still change after week ends)
   const now = new Date();
   const day = now.getDay(); // 0=Sun
   const sun = new Date(now);
@@ -344,7 +347,19 @@ async function main() {
   const sat = new Date(sun);
   sat.setDate(sat.getDate() + 6);
   const currentWeekEnd = sat.toISOString().split("T")[0];
-  console.log(`Current week: ${currentWeekStart} to ${currentWeekEnd}`);
+
+  const prevSun = new Date(sun);
+  prevSun.setDate(prevSun.getDate() - 7);
+  const prevWeekStart = prevSun.toISOString().split("T")[0];
+  const prevSat = new Date(prevSun);
+  prevSat.setDate(prevSat.getDate() + 6);
+  const prevWeekEnd = prevSat.toISOString().split("T")[0];
+
+  console.log(`Previous week: ${prevWeekStart} to ${prevWeekEnd}`);
+  await syncEvolution(prevWeekStart, prevWeekEnd);
+  await syncSentri(prevWeekStart, prevWeekEnd);
+
+  console.log(`\nCurrent week: ${currentWeekStart} to ${currentWeekEnd}`);
   await syncEvolution(currentWeekStart, currentWeekEnd);
   await syncSentri(currentWeekStart, currentWeekEnd);
 

@@ -120,7 +120,9 @@ export async function GET(request: Request) {
       const nd = new Date(week.end + "T00:00:00Z");
       nd.setUTCDate(nd.getUTCDate() + 1);
       const wEndUTC = nd.toISOString().split("T")[0] + "T05:59:59.999Z";
-      const cutoff = week.start + "T00:00:00.000Z";
+      const cutoffDate = new Date(week.start + "T00:00:00Z");
+      cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 2);
+      const cutoff = cutoffDate.toISOString();
 
       // Scorecard for jobs/turnaround/upsell
       const scRes = await fetch(
