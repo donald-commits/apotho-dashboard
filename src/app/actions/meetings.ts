@@ -65,23 +65,25 @@ export async function endMeeting(meetingId: string) {
     });
   }
 
-  // Also attempt email via Resend (requires verified domain to send to external recipients)
+  // Send emails via Gmail SMTP
   try {
-    const resendKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.NOTIFICATION_FROM_EMAIL || "Apotho Dashboard <onboarding@resend.dev>";
-    if (resendKey) {
-      const { Resend } = await import("resend");
-      const resend = new Resend(resendKey);
-      for (const entry of Array.from(todosByOwner.values())) {
-        const { name, email, todos } = entry;
-        const todoListHtml = todos.map((t) => `<li>${t}</li>`).join("");
-        resend.emails.send({
-          from: fromEmail,
-          to: email,
-          subject: `Your To-Dos — ${meeting.business.name} Meeting (${dateStr})`,
-          html: `<p>Hi ${name},</p><p>Here are your to-dos from the <strong>${meeting.business.name}</strong> Level 10 Meeting on ${dateStr}:</p><ul>${todoListHtml}</ul><p>Please complete these by next week's meeting.</p><p>— Apotho Dashboard</p>`,
-        }).catch(() => {});
-      }
+    const nodemailer = await import("nodemailer");
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+    for (const entry of Array.from(todosByOwner.values())) {
+      const { name, email, todos } = entry;
+      const todoListHtml = todos.map((t) => `<li>${t}</li>`).join("");
+      transporter.sendMail({
+        from: `"Apotho Dashboard" <${process.env.SMTP_USER}>`,
+        to: email,
+        subject: `Your To-Dos — ${meeting.business.name} Meeting (${dateStr})`,
+        html: `<p>Hi ${name},</p><p>Here are your to-dos from the <strong>${meeting.business.name}</strong> Level 10 Meeting on ${dateStr}:</p><ul>${todoListHtml}</ul><p>Please complete these by next week's meeting.</p><p>— Apotho Dashboard</p>`,
+      }).catch(() => {});
     }
   } catch {
     // Silently fail — email is best-effort
