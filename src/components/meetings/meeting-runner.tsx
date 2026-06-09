@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { saveSegue, addIssue, resolveIssue, saveRating, endMeeting } from "@/app/actions/meetings";
 import { toggleRock } from "@/app/actions/rocks";
-import { createTodo, toggleTodo, updateTodoRock, updateTodoOwner, killTodo } from "@/app/actions/todos";
+import { createTodo, toggleTodo, updateTodoRock, updateTodoOwner, killTodo, pushTodo } from "@/app/actions/todos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,7 @@ interface MeetingData {
   segues: Array<{ id: string; userId: string; userName: string; personal: string; professional: string }>;
   issues: Array<{ id: string; title: string; notes: string; resolved: boolean; meetingId: string }>;
   ratings: Array<{ id: string; userId: string; userName: string; rating: number }>;
-  todos: Array<{ id: string; title: string; done: boolean; ownerName: string; ownerId: string; rockId: string | null }>;
+  todos: Array<{ id: string; title: string; done: boolean; ownerName: string; ownerId: string; rockId: string | null; pushCount: number }>;
 }
 
 interface RockData {
@@ -44,7 +44,7 @@ interface Owner {
   name: string;
 }
 
-type TodoItem = { id: string; title: string; done: boolean; ownerName: string; ownerId: string; rockId: string | null };
+type TodoItem = { id: string; title: string; done: boolean; ownerName: string; ownerId: string; rockId: string | null; pushCount: number };
 type IssueItem = { id: string; title: string; notes: string; resolved: boolean; meetingId: string };
 
 interface MeetingRunnerProps {
@@ -331,13 +331,8 @@ function PreviousTodosSection({ todos, rocks, meeting, owners }: { todos: TodoIt
   }
 
   function handlePush(todo: TodoItem) {
-    const fd = new FormData();
-    fd.append("title", todo.title);
-    fd.append("businessId", meeting.businessId);
-    fd.append("meetingId", meeting.id);
-    fd.append("ownerId", todo.ownerId);
     startTransition(async () => {
-      await createTodo(fd);
+      await pushTodo(todo.id, meeting.id);
       setPushedIds((prev) => new Set(prev).add(todo.id));
     });
   }
@@ -375,7 +370,7 @@ function PreviousTodosSection({ todos, rocks, meeting, owners }: { todos: TodoIt
             </button>
             <div className="flex-1 min-w-0">
               <p className={`text-sm ${todo.done ? "line-through text-muted-foreground" : isPushed ? "line-through text-orange-500" : ""}`}>{todo.title}</p>
-              <p className={`text-xs ${isPushed ? "text-orange-400" : "text-muted-foreground"}`}>{todo.ownerName}{isPushed ? " — pushed to new to-dos" : ""}</p>
+              <p className={`text-xs ${isPushed ? "text-orange-400" : "text-muted-foreground"}`}>{todo.ownerName}{isPushed ? " — pushed to new to-dos" : todo.pushCount > 0 ? ` — pushed ${todo.pushCount}x` : ""}</p>
             </div>
             {!isPushed && (
               <>
@@ -663,7 +658,7 @@ function TodosSection({ meeting, owners, rocks, readOnly }: { meeting: MeetingDa
           </button>
           <div className="flex-1 min-w-0">
             <p className={`text-sm ${todo.done ? "line-through text-muted-foreground" : ""}`}>{todo.title}</p>
-            <p className="text-xs text-muted-foreground">{todo.ownerName}</p>
+            <p className="text-xs text-muted-foreground">{todo.ownerName}{todo.pushCount > 0 ? ` — pushed ${todo.pushCount}x` : ""}</p>
           </div>
           <select
             value={todo.ownerId}

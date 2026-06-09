@@ -149,6 +149,7 @@ model Todo {
   title       String
   done        Boolean   @default(false)
   killed      Boolean   @default(false)
+  pushCount   Int       @default(0)
   dueDate     DateTime?
   startDate   DateTime?
   endDate     DateTime?

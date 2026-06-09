@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { TodoToggle } from "@/components/todos/todo-toggle";
-import { TargetIcon, MilestoneIcon } from "lucide-react";
+import { TargetIcon, MilestoneIcon, BanIcon } from "lucide-react";
 
 interface SearchParams {
   filter?: string;
@@ -22,7 +22,7 @@ export default async function MyTodosPage({
   const todos = await prisma.todo.findMany({
     where: {
       ownerId: session.user.id,
-      ...(filter === "open" ? { done: false } : filter === "done" ? { done: true } : {}),
+      ...(filter === "open" ? { done: false, killed: false } : filter === "done" ? { done: true } : filter === "killed" ? { killed: true } : {}),
     },
     include: {
       business: true,
@@ -90,7 +90,7 @@ export default async function MyTodosPage({
 
       {/* Filter tabs */}
       <div className="flex gap-2">
-        {(["open", "done", "all"] as const).map((f) => (
+        {(["open", "done", "killed", "all"] as const).map((f) => (
           <Link
             key={f}
             href={`/my-todos?filter=${f}`}
@@ -133,17 +133,29 @@ export default async function MyTodosPage({
                 {group.todos.map((todo) => {
                   const todoContent = (
                     <>
-                      <TodoToggle todoId={todo.id} done={todo.done} />
+                      {todo.killed ? (
+                        <BanIcon className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <TodoToggle todoId={todo.id} done={todo.done} />
+                      )}
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${todo.done ? "line-through text-muted-foreground" : ""}`}>
+                        <p className={`text-sm font-medium ${todo.killed ? "line-through text-red-400" : todo.done ? "line-through text-muted-foreground" : ""}`}>
                           {todo.title}
                         </p>
-                        {todo.milestone && (
-                          <p className="text-[11px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
-                            <MilestoneIcon className="h-2.5 w-2.5" />
-                            {todo.milestone.title}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {todo.milestone && (
+                            <p className="text-[11px] text-muted-foreground/70 flex items-center gap-1">
+                              <MilestoneIcon className="h-2.5 w-2.5" />
+                              {todo.milestone.title}
+                            </p>
+                          )}
+                          {todo.pushCount > 0 && (
+                            <span className="text-[11px] text-orange-500 font-medium">pushed {todo.pushCount}x</span>
+                          )}
+                          {todo.killed && (
+                            <span className="text-[11px] text-red-400 font-medium">killed</span>
+                          )}
+                        </div>
                       </div>
                       {todo.dueDate && (
                         <span className="shrink-0 text-xs text-muted-foreground">
@@ -152,22 +164,19 @@ export default async function MyTodosPage({
                       )}
                     </>
                   );
+                  const stateClass = todo.killed ? "bg-red-50 border-red-200 opacity-70" : todo.done ? "bg-muted/50 opacity-70" : "bg-card";
                   return todo.rock ? (
                     <Link
                       key={todo.id}
                       href={`/${todo.business.slug}/rocks/${todo.rock.id}#todo-${todo.id}`}
-                      className={`flex items-start gap-3 rounded-lg border p-3 ml-4 transition-colors hover:border-primary/30 hover:bg-muted/30 ${
-                        todo.done ? "bg-muted/50 opacity-70" : "bg-card"
-                      }`}
+                      className={`flex items-start gap-3 rounded-lg border p-3 ml-4 transition-colors hover:border-primary/30 hover:bg-muted/30 ${stateClass}`}
                     >
                       {todoContent}
                     </Link>
                   ) : (
                     <div
                       key={todo.id}
-                      className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                        todo.done ? "bg-muted/50 opacity-70" : "bg-card"
-                      }`}
+                      className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${stateClass}`}
                     >
                       {todoContent}
                     </div>

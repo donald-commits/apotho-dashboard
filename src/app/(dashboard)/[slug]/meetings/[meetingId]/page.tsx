@@ -56,6 +56,7 @@ export default async function MeetingPage({ params }: PageProps) {
       ownerName: t.owner.name,
       ownerId: t.ownerId,
       rockId: t.rockId,
+      pushCount: t.pushCount,
     }));
 
   const previousIssues = (previousMeeting?.issues ?? []).map((i) => ({
@@ -157,6 +158,7 @@ export default async function MeetingPage({ params }: PageProps) {
             ownerName: t.owner.name,
             ownerId: t.ownerId,
             rockId: t.rockId,
+            pushCount: t.pushCount,
           })),
         }}
         rocks={rocks.map((r) => ({
