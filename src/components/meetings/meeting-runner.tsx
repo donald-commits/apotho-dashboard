@@ -44,7 +44,7 @@ interface Owner {
   name: string;
 }
 
-type TodoItem = { id: string; title: string; done: boolean; ownerName: string; ownerId: string; rockId: string | null; pushCount: number };
+type TodoItem = { id: string; title: string; done: boolean; ownerName: string; ownerId: string; rockId: string | null; pushCount: number; pushed?: boolean };
 type IssueItem = { id: string; title: string; notes: string; resolved: boolean; meetingId: string };
 
 interface MeetingRunnerProps {
@@ -324,7 +324,7 @@ function ScorecardSection({ measurables, weeks }: { measurables: MeasurableData[
 
 function PreviousTodosSection({ todos, rocks, meeting, owners }: { todos: TodoItem[]; rocks: RockData[]; meeting: MeetingData; owners: Owner[] }) {
   const [isPending, startTransition] = useTransition();
-  const [pushedIds, setPushedIds] = useState<Set<string>>(new Set());
+  const [localPushedIds, setLocalPushedIds] = useState<Set<string>>(new Set());
 
   function handleToggle(todoId: string) {
     startTransition(() => toggleTodo(todoId));
@@ -333,7 +333,7 @@ function PreviousTodosSection({ todos, rocks, meeting, owners }: { todos: TodoIt
   function handlePush(todo: TodoItem) {
     startTransition(async () => {
       await pushTodo(todo.id, meeting.id);
-      setPushedIds((prev) => new Set(prev).add(todo.id));
+      setLocalPushedIds((prev) => new Set(prev).add(todo.id));
     });
   }
 
@@ -362,7 +362,7 @@ function PreviousTodosSection({ todos, rocks, meeting, owners }: { todos: TodoIt
       <p className="text-sm text-muted-foreground">Review to-dos from the previous meeting. <strong>Done</strong> = mark complete, <strong>Push</strong> = carry to new to-dos, <strong>Kill</strong> = move to issues.</p>
 
       {todos.map((todo) => {
-        const isPushed = pushedIds.has(todo.id);
+        const isPushed = todo.pushed || localPushedIds.has(todo.id);
         return (
           <div key={todo.id} className={`flex items-center gap-2 rounded-lg border p-3 ${todo.done ? "bg-muted/50" : isPushed ? "bg-orange-50 border-orange-200" : ""}`}>
             <button onClick={() => handleToggle(todo.id)} disabled={isPending || isPushed} className="shrink-0 disabled:opacity-50" title="Done">

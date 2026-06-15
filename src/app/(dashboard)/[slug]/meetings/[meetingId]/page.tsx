@@ -46,18 +46,21 @@ export default async function MeetingPage({ params }: PageProps) {
     },
   });
 
-  // Only carry over incomplete (not done, not killed) todos
-  const previousTodos = (previousMeeting?.todos ?? [])
-    .filter((t) => !t.done && !t.killed)
-    .map((t) => ({
-      id: t.id,
-      title: t.title,
-      done: t.done,
-      ownerName: t.owner.name,
-      ownerId: t.ownerId,
-      rockId: t.rockId,
-      pushCount: t.pushCount,
-    }));
+  // Carry over incomplete (not done, not killed) todos from previous meeting
+  // Also include todos that were pushed from the previous meeting into this one
+  const prevTodosStillThere = (previousMeeting?.todos ?? []).filter((t) => !t.done && !t.killed);
+  const pushedIntoThisMeeting = meeting.todos.filter((t) => t.pushCount > 0 && !prevTodosStillThere.some((pt) => pt.id === t.id));
+  const allPreviousTodos = [...prevTodosStillThere, ...pushedIntoThisMeeting];
+  const previousTodos = allPreviousTodos.map((t) => ({
+    id: t.id,
+    title: t.title,
+    done: t.done,
+    ownerName: t.owner.name,
+    ownerId: t.ownerId,
+    rockId: t.rockId,
+    pushCount: t.pushCount,
+    pushed: t.meetingId === meeting.id && t.pushCount > 0,
+  }));
 
   const previousIssues = (previousMeeting?.issues ?? []).map((i) => ({
     id: i.id,
