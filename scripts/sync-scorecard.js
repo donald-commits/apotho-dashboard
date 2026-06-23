@@ -150,10 +150,16 @@ async function syncEvolution(wStart, wEnd) {
   console.log("\n=== Evolution Drafting (Victor APIs + Stripe) ===");
   const IDS = {
     leads: "cmnghk4n2002eg0vp8xnlce1r",
+    totalLeads: "cmqa5wgq8003kcovptyvx0vlm",
+    activeProjects: "cmqa5wgxn003mcovp0qkdpapb",
     leadsGoogle: "f2284634-c2a4-478e-8978-5cb9c7295063",
     leadsAngi: "679f09f3-16d6-4d98-b749-289c61653813",
     leadsMeta: "be25698d-1704-463f-a2b5-4216707f0965",
     leadsThumbtack: "b4cfb3ba-ded6-4342-87f6-2ad7fa897a62",
+    leadsWebsite: "f8f6c57a-dcf2-49e9-85f1-5c5af1c2c09d",
+    leadsGMB: "4464f5d2-2b11-4848-97ca-e61e589a3968",
+    leadsInbound: "9b05909a-4cdf-4de7-8962-f33b893a01cd",
+    leadsReferral: "0e2fdbd7-8b96-4234-975d-4bdd423b8973",
     engineeringSold: "d1e9ea80-0ea6-40bf-b36e-62279e6eb185",
     answerRate: "cmo99tx3c00000ajvtdf2fsct",
     conversion: "cmnghk4qg002fg0vpvk7bjgas",
@@ -203,14 +209,36 @@ async function syncEvolution(wStart, wEnd) {
   const ar = totalLeads > 0 ? (((totalLeads - excludeCount) / totalLeads) * 100).toFixed(1) : "0";
 
   // Lead sources
-  let leadsGoogle = 0, leadsAngi = 0, leadsMeta = 0, leadsThumbtack = 0;
+  let leadsGoogle = 0, leadsAngi = 0, leadsMeta = 0, leadsThumbtack = 0, leadsWebsite = 0, leadsGMB = 0, leadsInbound = 0, leadsReferral = 0;
   for (const c of weekClients) {
     const src = (c.leadSource || "").toLowerCase();
-    if (src.includes("google") || src === "gmb" || src === "gmb_inbound") leadsGoogle++;
+    if (src.includes("google_ads") || src === "google ads") leadsGoogle++;
+    else if (src === "gmb" || src === "gmb_inbound") leadsGMB++;
     else if (src.includes("angi")) leadsAngi++;
     else if (src === "meta" || src === "instagram") leadsMeta++;
     else if (src.includes("thumbtack")) leadsThumbtack++;
+    else if (src.includes("website")) leadsWebsite++;
+    else if (src === "inbound") leadsInbound++;
+    else if (src.includes("referral")) leadsReferral++;
   }
+
+  // Total leads (all-time client count)
+  let totalLeadsAllTime = 0;
+  try {
+    const tlRes = await fetch("https://victor-evo.vercel.app/api/v1/clients?limit=1", { headers: { Authorization: `Bearer ${VICTOR_KEY}` } });
+    const tlData = await tlRes.json();
+    totalLeadsAllTime = tlData.meta?.total || 0;
+  } catch {}
+
+  // Active projects (exclude not_started and completed stages)
+  let activeProjectCount = 0;
+  try {
+    for (const stage of ["initial_concept", "out_to_client", "revisions", "production", "engineering", "submitted", "collections", "site_measure"]) {
+      const pRes = await fetch(`https://victor-evo.vercel.app/api/v1/projects?limit=1&stage=${stage}`, { headers: { Authorization: `Bearer ${VICTOR_KEY}` } });
+      const pData = await pRes.json();
+      activeProjectCount += pData.meta?.total || 0;
+    }
+  } catch {}
 
   // 3. Fetch revenue for sales + finals
   console.log("  Fetching revenue...");
@@ -262,10 +290,16 @@ async function syncEvolution(wStart, wEnd) {
 
   // 5. Upsert all
   await upsert(IDS.leads, wStart, totalLeads);
+  await upsert(IDS.totalLeads, wStart, totalLeadsAllTime);
+  await upsert(IDS.activeProjects, wStart, activeProjectCount);
   await upsert(IDS.leadsGoogle, wStart, leadsGoogle);
   await upsert(IDS.leadsAngi, wStart, leadsAngi);
   await upsert(IDS.leadsMeta, wStart, leadsMeta);
   await upsert(IDS.leadsThumbtack, wStart, leadsThumbtack);
+  await upsert(IDS.leadsWebsite, wStart, leadsWebsite);
+  await upsert(IDS.leadsGMB, wStart, leadsGMB);
+  await upsert(IDS.leadsInbound, wStart, leadsInbound);
+  await upsert(IDS.leadsReferral, wStart, leadsReferral);
   await upsert(IDS.answerRate, wStart, ar);
   await upsert(IDS.conversion, wStart, cr);
   await upsert(IDS.sales, wStart, sales);
@@ -279,7 +313,7 @@ async function syncEvolution(wStart, wEnd) {
   await upsert(IDS.angi, wStart, "3.6");
   await upsert(IDS.bbb, wStart, "1.0");
 
-  console.log(`  ${wStart}: leads=${totalLeads} (G=${leadsGoogle} A=${leadsAngi} M=${leadsMeta} T=${leadsThumbtack}) ar=${ar}% cr=${cr}% sold=${sales} eng=${engSold} jobs=${jobs} finals=${finals} tt=${tt}d rev=$${Math.round(stripeRev)} upsell=$${Math.round(upsellCents / 100)}`);
+  console.log(`  ${wStart}: leads=${totalLeads} (G=${leadsGoogle} A=${leadsAngi} M=${leadsMeta} T=${leadsThumbtack} W=${leadsWebsite} GMB=${leadsGMB} In=${leadsInbound} R=${leadsReferral}) ar=${ar}% cr=${cr}% sold=${sales} eng=${engSold} jobs=${jobs} finals=${finals} tt=${tt}d rev=$${Math.round(stripeRev)} upsell=$${Math.round(upsellCents / 100)} totalLeads=${totalLeadsAllTime} active=${activeProjectCount}`);
 }
 
 async function syncSentri(wStart, wEnd) {
