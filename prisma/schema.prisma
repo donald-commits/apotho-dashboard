@@ -214,6 +214,7 @@ model MeetingRating {
   meetingId String
   userId    String
   rating    Int     // 1-10
+  reason    String?
 
   meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)

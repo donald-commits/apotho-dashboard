@@ -153,6 +153,7 @@ export default async function MeetingPage({ params }: PageProps) {
             userId: r.userId,
             userName: r.user.name,
             rating: r.rating,
+            reason: r.reason ?? null,
           })),
           todos: meeting.todos.map((t) => ({
             id: t.id,

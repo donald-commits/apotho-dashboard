@@ -119,7 +119,7 @@ function parseMacuRows(rows: string[][]): FinancialRow[] {
   let dateIdx = findIdx("post date", "transaction date", "date");
   let amountIdx = findIdx("amount");
   let descIdx = findIdx("description", "memo", "payee", "merchant");
-  let categoryIdx = findIdx("category", "categ");
+  const categoryIdx = findIdx("category", "categ");
 
   // Fallback to canonical MACU layout (C=date, E=amount, H=description)
   if (dateIdx === -1) dateIdx = 2;
@@ -160,7 +160,7 @@ function parseAmexRows(rows: string[][]): FinancialRow[] {
   let dateIdx = findIdx("date");
   let amountIdx = findIdx("amount");
   let descIdx = findIdx("description", "merchant", "payee");
-  let categoryIdx = findIdx("category", "categ");
+  const categoryIdx = findIdx("category", "categ");
 
   // Fallback to canonical AmEx layout (A=date, C=description, G=amount)
   if (dateIdx === -1) dateIdx = 0;

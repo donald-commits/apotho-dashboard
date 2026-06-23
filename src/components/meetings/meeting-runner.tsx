@@ -19,7 +19,7 @@ interface MeetingData {
   endedAt: string | null;
   segues: Array<{ id: string; userId: string; userName: string; personal: string; professional: string }>;
   issues: Array<{ id: string; title: string; notes: string; resolved: boolean; meetingId: string }>;
-  ratings: Array<{ id: string; userId: string; userName: string; rating: number }>;
+  ratings: Array<{ id: string; userId: string; userName: string; rating: number; reason: string | null }>;
   todos: Array<{ id: string; title: string; done: boolean; ownerName: string; ownerId: string; rockId: string | null; pushCount: number }>;
 }
 
@@ -724,13 +724,18 @@ function ConcludeSection({
   const [isPending, startTransition] = useTransition();
   const [selectedUser, setSelectedUser] = useState(owners[0]?.id ?? "");
   const [rating, setRating] = useState(8);
+  const [reason, setReason] = useState("");
 
   function handleSaveRating() {
     const fd = new FormData();
     fd.append("meetingId", meeting.id);
     fd.append("userId", selectedUser);
     fd.append("rating", String(rating));
-    startTransition(() => saveRating(fd));
+    fd.append("reason", reason);
+    startTransition(() => {
+      saveRating(fd);
+      setReason("");
+    });
   }
 
   function handleEnd() {
@@ -751,11 +756,14 @@ function ConcludeSection({
 
       {/* Existing ratings */}
       {meeting.ratings.length > 0 && (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-2">
           {meeting.ratings.map((r) => (
-            <div key={r.id} className="flex items-center justify-between text-sm">
-              <span>{r.userName}</span>
-              <span className="font-semibold">{r.rating}/10</span>
+            <div key={r.id} className="rounded-lg border p-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">{r.userName}</span>
+                <span className="font-semibold">{r.rating}/10</span>
+              </div>
+              {r.reason && <p className="text-xs text-muted-foreground mt-1">{r.reason}</p>}
             </div>
           ))}
           {avgRating && (
@@ -790,6 +798,15 @@ function ConcludeSection({
               value={rating}
               onChange={(e) => setRating(parseInt(e.target.value, 10))}
               className="w-full mt-1"
+            />
+          </div>
+          <div>
+            <Label>Why this rating?</Label>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="What went well or could improve..."
+              className="mt-1"
             />
           </div>
           <Button size="sm" onClick={handleSaveRating} disabled={isPending}>

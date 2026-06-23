@@ -154,14 +154,15 @@ export async function saveRating(formData: FormData) {
   const meetingId = formData.get("meetingId") as string;
   const userId = formData.get("userId") as string;
   const rating = parseInt(formData.get("rating") as string, 10);
+  const reason = (formData.get("reason") as string) || null;
 
   if (!meetingId || !userId || !rating) throw new Error("Missing required fields");
 
   const existing = await prisma.meetingRating.findFirst({ where: { meetingId, userId } });
   if (existing) {
-    await prisma.meetingRating.update({ where: { id: existing.id }, data: { rating } });
+    await prisma.meetingRating.update({ where: { id: existing.id }, data: { rating, reason } });
   } else {
-    await prisma.meetingRating.create({ data: { meetingId, userId, rating } });
+    await prisma.meetingRating.create({ data: { meetingId, userId, rating, reason } });
   }
 
   const meeting = await prisma.meeting.findUnique({ where: { id: meetingId }, include: { business: true } });
