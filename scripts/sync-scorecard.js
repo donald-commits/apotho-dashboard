@@ -158,7 +158,7 @@ async function syncEvolution(wStart, wEnd) {
     leadsWebsite: "f8f6c57a-dcf2-49e9-85f1-5c5af1c2c09d",
     leadsGMB: "4464f5d2-2b11-4848-97ca-e61e589a3968",
     leadsInbound: "9b05909a-4cdf-4de7-8962-f33b893a01cd",
-    leadsReferral: "0e2fdbd7-8b96-4234-975d-4bdd423b8973",
+    leadsTerraform: "29054fad-7444-4181-b088-2bc71e8e8c83",
     engineeringSold: "d1e9ea80-0ea6-40bf-b36e-62279e6eb185",
     answerRate: "cmo99tx3c00000ajvtdf2fsct",
     conversion: "cmnghk4qg002fg0vpvk7bjgas",
@@ -208,17 +208,17 @@ async function syncEvolution(wStart, wEnd) {
   const ar = totalLeads > 0 ? (((totalLeads - excludeCount) / totalLeads) * 100).toFixed(1) : "0";
 
   // Lead sources
-  let leadsGoogle = 0, leadsAngi = 0, leadsMeta = 0, leadsThumbtack = 0, leadsWebsite = 0, leadsGMB = 0, leadsInbound = 0, leadsReferral = 0;
+  let leadsGoogle = 0, leadsAngi = 0, leadsMeta = 0, leadsThumbtack = 0, leadsWebsite = 0, leadsGMB = 0, leadsInbound = 0, leadsTerraform = 0;
   for (const c of weekClients) {
-    const src = (c.leadSource || "").toLowerCase();
-    if (src.includes("google_ads") || src === "google ads") leadsGoogle++;
+    const src = (c.leadSource || "").trim().toLowerCase();
+    if (src === "google ads" || src === "google_ads") leadsGoogle++;
     else if (src === "gmb" || src === "gmb_inbound") leadsGMB++;
-    else if (src.includes("angi")) leadsAngi++;
+    else if (src === "angi ads" || src === "angi_leads") leadsAngi++;
+    else if (src === "terraform angie ads") leadsTerraform++;
     else if (src === "meta" || src === "instagram") leadsMeta++;
-    else if (src.includes("thumbtack")) leadsThumbtack++;
-    else if (src.includes("website")) leadsWebsite++;
+    else if (src === "thumbtack") leadsThumbtack++;
+    else if (src === "website submission") leadsWebsite++;
     else if (src === "inbound") leadsInbound++;
-    else if (src.includes("referral")) leadsReferral++;
   }
 
   // Active projects (exclude not_started and completed stages)
@@ -289,7 +289,7 @@ async function syncEvolution(wStart, wEnd) {
   await upsert(IDS.leadsWebsite, wStart, leadsWebsite);
   await upsert(IDS.leadsGMB, wStart, leadsGMB);
   await upsert(IDS.leadsInbound, wStart, leadsInbound);
-  await upsert(IDS.leadsReferral, wStart, leadsReferral);
+  await upsert(IDS.leadsTerraform, wStart, leadsTerraform);
   await upsert(IDS.answerRate, wStart, ar);
   await upsert(IDS.conversion, wStart, cr);
   await upsert(IDS.sales, wStart, sales);
@@ -303,7 +303,7 @@ async function syncEvolution(wStart, wEnd) {
   await upsert(IDS.angi, wStart, "3.6");
   await upsert(IDS.bbb, wStart, "1.0");
 
-  console.log(`  ${wStart}: leads=${totalLeads} (G=${leadsGoogle} A=${leadsAngi} M=${leadsMeta} T=${leadsThumbtack} W=${leadsWebsite} GMB=${leadsGMB} In=${leadsInbound} R=${leadsReferral}) ar=${ar}% cr=${cr}% sold=${sales} eng=${engSold} jobs=${jobs} finals=${finals} tt=${tt}d rev=$${Math.round(stripeRev)} upsell=$${Math.round(upsellCents / 100)} active=${activeProjectCount}`);
+  console.log(`  ${wStart}: leads=${totalLeads} (G=${leadsGoogle} A=${leadsAngi} M=${leadsMeta} T=${leadsThumbtack} W=${leadsWebsite} GMB=${leadsGMB} In=${leadsInbound} TF=${leadsTerraform}) ar=${ar}% cr=${cr}% sold=${sales} eng=${engSold} jobs=${jobs} finals=${finals} tt=${tt}d rev=$${Math.round(stripeRev)} upsell=$${Math.round(upsellCents / 100)} active=${activeProjectCount}`);
 }
 
 async function syncSentri(wStart, wEnd) {
