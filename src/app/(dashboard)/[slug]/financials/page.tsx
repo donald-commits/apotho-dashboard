@@ -1,15 +1,17 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { ChevronLeftIcon } from "lucide-react";
+import { ChevronLeftIcon, InfoIcon } from "lucide-react";
 import { FinancialsDashboard } from "@/components/financials/financials-dashboard";
 
 interface PageProps {
   params: { slug: string };
 }
 
-// Businesses without a configured sheet
-const SUPPORTED_SLUGS = ["evolution-drafting", "sentri-homes"];
+// Businesses with their own books wired to a Google Sheet.
+// Everything else rolls up under Apotho Improvements (the parent).
+const SHEET_WIRED_SLUGS = ["evolution-drafting", "sentri-homes"];
+const PORTFOLIO_SLUG = "apotho-improvements";
 
 export default async function FinancialsPage({ params }: PageProps) {
   const business = await prisma.business.findUnique({
@@ -18,7 +20,13 @@ export default async function FinancialsPage({ params }: PageProps) {
 
   if (!business) notFound();
 
-  const hasSheet = SUPPORTED_SLUGS.includes(params.slug);
+  const isPortfolio = params.slug === PORTFOLIO_SLUG;
+  const hasOwnSheet = SHEET_WIRED_SLUGS.includes(params.slug);
+  const subtitle = isPortfolio
+    ? "Portfolio rollup across every entity (MACU + AmEx)"
+    : hasOwnSheet
+      ? "Revenue and expenses from MACU + AmEx"
+      : `${business.name} doesn't have its own books yet — see Apotho Improvements for the consolidated view.`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,25 +38,21 @@ export default async function FinancialsPage({ params }: PageProps) {
           <ChevronLeftIcon className="h-4 w-4 mr-1" />
           {business.name}
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight gradient-text">Financials</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Revenue and expenses from MACU bank account
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">Financials</h1>
+        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
       </div>
 
-      {hasSheet ? (
-        <FinancialsDashboard slug={params.slug} />
-      ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">
-            No Google Sheet configured for {business.name}.
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            To connect a sheet, add the spreadsheet ID to the environment and update the SHEET_MAP in
-            <code className="mx-1 rounded bg-muted px-1 py-0.5 text-xs">src/app/api/financials/route.ts</code>.
-          </p>
-        </div>
+      {!isPortfolio && !hasOwnSheet && (
+        <Link
+          href={`/${PORTFOLIO_SLUG}/financials`}
+          className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700 hover:bg-blue-100 inline-flex items-center gap-2"
+        >
+          <InfoIcon className="h-4 w-4" />
+          View consolidated portfolio financials →
+        </Link>
       )}
+
+      <FinancialsDashboard slug={params.slug} />
     </div>
   );
 }

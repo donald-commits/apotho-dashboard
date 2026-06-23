@@ -1,4 +1,5 @@
-// Google Sheets API helper — refreshes access token, fetches sheet data
+// Google Sheets API helper — refreshes access token, fetches sheet data,
+// parses MACU + AmEx ledger tabs into a unified FinancialSummary shape.
 
 interface TokenResponse {
   access_token: string;
@@ -39,12 +40,9 @@ export async function getSheetNames(spreadsheetId: string, accessToken: string):
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
   });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch sheet names: ${await res.text()}`);
-  }
-
+  if (!res.ok) throw new Error(`Failed to fetch sheet names: ${await res.text()}`);
   const data = await res.json();
   return data.sheets.map((s: { properties: { title: string } }) => s.properties.title);
 }
@@ -52,117 +50,220 @@ export async function getSheetNames(spreadsheetId: string, accessToken: string):
 export async function getSheetData(
   spreadsheetId: string,
   sheetName: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<string[][]> {
   const encodedSheet = encodeURIComponent(sheetName);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodedSheet}`;
-
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
   });
-
-  if (!res.ok) {
-    // Return empty if the sheet doesn't exist or can't be read
-    return [];
-  }
-
+  if (!res.ok) return [];
   const data = await res.json();
   return (data.values as string[][]) ?? [];
 }
 
-// Parse a dollar amount string to a number
 function parseAmount(raw: string): number {
   if (!raw) return 0;
-  const cleaned = raw.replace(/[$,\s]/g, "").trim();
-  const n = parseFloat(cleaned);
-  return isNaN(n) ? 0 : n;
+  const cleaned = String(raw).replace(/[$,\s]/g, "").trim();
+  // Handle parens-as-negative ("(100.00)" → -100)
+  const negative = /^\(.*\)$/.test(cleaned);
+  const n = parseFloat(cleaned.replace(/[()]/g, ""));
+  if (isNaN(n)) return 0;
+  return negative ? -n : n;
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface FinancialRow {
+  date: string;
+  description: string;
+  amount: number;       // signed: + = money in, - = money out
+  category: string;
+  source: "MACU" | "AmEx";
+  isRevenue: boolean;
 }
 
 export interface FinancialSummary {
+  source: "MACU" | "AmEx";
   sheetName: string;
   revenue: number;
   expenses: number;
   netIncome: number;
-  rows: Array<{
-    date: string;
-    description: string;
-    amount: number;
-    category: string;
-    isRevenue: boolean;
-  }>;
+  rows: FinancialRow[];
   expenseByCategory: Record<string, number>;
 }
 
-/**
- * Fetch the MACU tab from a spreadsheet and parse transactions.
- * Looks for columns: Date, Description, Amount (or Debit/Credit).
- * Revenue = positive amounts, Expenses = negative amounts.
- */
-export async function fetchFinancials(
-  spreadsheetId: string,
-  accessToken: string
-): Promise<FinancialSummary[]> {
-  const sheetNames = await getSheetNames(spreadsheetId, accessToken);
+export interface BusinessFinancials {
+  businessName: string;
+  businessSlug: string;
+  sources: FinancialSummary[];
+  totalRevenue: number;
+  totalExpenses: number;
+  totalNetIncome: number;
+  expenseByCategory: Record<string, number>;
+}
 
-  // Find MACU tabs (case-insensitive match)
-  const macuSheets = sheetNames.filter((name) =>
-    name.toLowerCase().includes("macu") || name.toLowerCase().includes("bank")
-  );
+// ─── Per-source parsers ───────────────────────────────────────────────────────
 
-  // If no MACU tab found, try to use all sheets
-  const sheetsToProcess = macuSheets.length > 0 ? macuSheets : sheetNames.slice(0, 3);
+// MACU export schema: A=Transaction Date, B=Post Date, C=Description (legacy?),
+// real layout per CLAUDE.md scripts: amount=col E, date=col C, description=col H.
+// We auto-detect by header, falling back to the known indices.
+function parseMacuRows(rows: string[][]): FinancialRow[] {
+  if (rows.length < 2) return [];
 
-  const results: FinancialSummary[] = [];
+  const headers = rows[0].map((h) => (h ?? "").toLowerCase().trim());
+  const findIdx = (...patterns: string[]) =>
+    headers.findIndex((h) => patterns.some((p) => h.includes(p)));
 
-  for (const sheetName of sheetsToProcess) {
-    const rows = await getSheetData(spreadsheetId, sheetName, accessToken);
-    if (rows.length < 2) continue;
+  let dateIdx = findIdx("post date", "transaction date", "date");
+  let amountIdx = findIdx("amount");
+  let descIdx = findIdx("description", "memo", "payee", "merchant");
+  let categoryIdx = findIdx("category", "categ");
 
-    // Find header row (first row)
-    const headers = rows[0].map((h) => h.toLowerCase().trim());
-    const dateIdx = headers.findIndex((h) => h.includes("date"));
-    const descIdx = headers.findIndex((h) => h.includes("desc") || h.includes("memo") || h.includes("payee"));
-    const amountIdx = headers.findIndex((h) => h.includes("amount") || h.includes("debit") || h.includes("credit"));
-    const categoryIdx = headers.findIndex((h) => h.includes("categ") || h.includes("type"));
+  // Fallback to canonical MACU layout (C=date, E=amount, H=description)
+  if (dateIdx === -1) dateIdx = 2;
+  if (amountIdx === -1) amountIdx = 4;
+  if (descIdx === -1) descIdx = 7;
 
-    if (amountIdx === -1) continue; // Can't parse without amount column
-
-    const parsedRows: FinancialSummary["rows"] = [];
-    const expenseByCategory: Record<string, number> = {};
-
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (!row || row.length === 0) continue;
-
-      const rawAmount = row[amountIdx] ?? "";
-      const amount = parseAmount(rawAmount);
-      if (amount === 0) continue;
-
-      const date = dateIdx >= 0 ? (row[dateIdx] ?? "") : "";
-      const description = descIdx >= 0 ? (row[descIdx] ?? "") : row[1] ?? "";
-      const category = categoryIdx >= 0 ? (row[categoryIdx] ?? "Uncategorized") : "Uncategorized";
-      const isRevenue = amount > 0;
-
-      if (!isRevenue) {
-        const absAmount = Math.abs(amount);
-        expenseByCategory[category] = (expenseByCategory[category] ?? 0) + absAmount;
-      }
-
-      parsedRows.push({ date, description, amount, category, isRevenue });
-    }
-
-    const revenue = parsedRows.filter((r) => r.isRevenue).reduce((s, r) => s + r.amount, 0);
-    const expenses = parsedRows.filter((r) => !r.isRevenue).reduce((s, r) => s + Math.abs(r.amount), 0);
-
-    results.push({
-      sheetName,
-      revenue,
-      expenses,
-      netIncome: revenue - expenses,
-      rows: parsedRows,
-      expenseByCategory,
+  const out: FinancialRow[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0) continue;
+    const amount = parseAmount(row[amountIdx] ?? "");
+    if (amount === 0) continue;
+    const date = (row[dateIdx] ?? "").trim();
+    const description = (row[descIdx] ?? "").trim() || "—";
+    const category = categoryIdx >= 0 ? (row[categoryIdx] ?? "Uncategorized").trim() || "Uncategorized" : "Uncategorized";
+    out.push({
+      date,
+      description,
+      amount,
+      category,
+      source: "MACU",
+      isRevenue: amount > 0,
     });
   }
+  return out;
+}
 
-  return results;
+// AmEx export schema per CLAUDE.md scripts: amount=col G, date=col A, description=col C.
+// AmEx sign convention: charges/expenses are POSITIVE in their export, payments are NEGATIVE.
+// We flip the sign so the unified model is "+ = money in to the business".
+function parseAmexRows(rows: string[][]): FinancialRow[] {
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map((h) => (h ?? "").toLowerCase().trim());
+  const findIdx = (...patterns: string[]) =>
+    headers.findIndex((h) => patterns.some((p) => h.includes(p)));
+
+  let dateIdx = findIdx("date");
+  let amountIdx = findIdx("amount");
+  let descIdx = findIdx("description", "merchant", "payee");
+  let categoryIdx = findIdx("category", "categ");
+
+  // Fallback to canonical AmEx layout (A=date, C=description, G=amount)
+  if (dateIdx === -1) dateIdx = 0;
+  if (descIdx === -1) descIdx = 2;
+  if (amountIdx === -1) amountIdx = 6;
+
+  const out: FinancialRow[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0) continue;
+    const rawAmount = parseAmount(row[amountIdx] ?? "");
+    if (rawAmount === 0) continue;
+    // Flip AmEx sign: a positive AmEx row is a CHARGE (expense), negative is a payment to the card.
+    // Drop card payments entirely — they're internal transfers, not real revenue.
+    if (rawAmount < 0) continue;
+    const amount = -rawAmount; // expense in unified model
+    const date = (row[dateIdx] ?? "").trim();
+    const description = (row[descIdx] ?? "").trim() || "—";
+    const category = categoryIdx >= 0 ? (row[categoryIdx] ?? "Uncategorized").trim() || "Uncategorized" : "Uncategorized";
+    out.push({
+      date,
+      description,
+      amount,
+      category,
+      source: "AmEx",
+      isRevenue: false,
+    });
+  }
+  return out;
+}
+
+function summarize(source: "MACU" | "AmEx", sheetName: string, rows: FinancialRow[]): FinancialSummary {
+  const revenue = rows.filter((r) => r.isRevenue).reduce((s, r) => s + r.amount, 0);
+  const expenses = rows.filter((r) => !r.isRevenue).reduce((s, r) => s + Math.abs(r.amount), 0);
+  const expenseByCategory: Record<string, number> = {};
+  for (const r of rows) {
+    if (r.isRevenue) continue;
+    const cat = r.category || "Uncategorized";
+    expenseByCategory[cat] = (expenseByCategory[cat] ?? 0) + Math.abs(r.amount);
+  }
+  return {
+    source,
+    sheetName,
+    revenue,
+    expenses,
+    netIncome: revenue - expenses,
+    rows,
+    expenseByCategory,
+  };
+}
+
+// ─── Public: fetch one business ───────────────────────────────────────────────
+
+export async function fetchBusinessFinancials(
+  businessName: string,
+  businessSlug: string,
+  spreadsheetId: string,
+  accessToken: string,
+): Promise<BusinessFinancials> {
+  const sheetNames = await getSheetNames(spreadsheetId, accessToken);
+  const macuTab = sheetNames.find((n) => /^macu$/i.test(n)) ?? sheetNames.find((n) => /macu/i.test(n));
+  const amexTab = sheetNames.find((n) => /^amex$/i.test(n)) ?? sheetNames.find((n) => /amex/i.test(n));
+
+  const sources: FinancialSummary[] = [];
+
+  if (macuTab) {
+    const grid = await getSheetData(spreadsheetId, macuTab, accessToken);
+    sources.push(summarize("MACU", macuTab, parseMacuRows(grid)));
+  }
+  if (amexTab) {
+    const grid = await getSheetData(spreadsheetId, amexTab, accessToken);
+    sources.push(summarize("AmEx", amexTab, parseAmexRows(grid)));
+  }
+
+  const totalRevenue = sources.reduce((s, x) => s + x.revenue, 0);
+  const totalExpenses = sources.reduce((s, x) => s + x.expenses, 0);
+  const expenseByCategory: Record<string, number> = {};
+  for (const src of sources) {
+    for (const [cat, amt] of Object.entries(src.expenseByCategory)) {
+      expenseByCategory[cat] = (expenseByCategory[cat] ?? 0) + amt;
+    }
+  }
+
+  return {
+    businessName,
+    businessSlug,
+    sources,
+    totalRevenue,
+    totalExpenses,
+    totalNetIncome: totalRevenue - totalExpenses,
+    expenseByCategory,
+  };
+}
+
+// ─── Public: fetch all subsidiaries for the Apotho Improvements rollup ────────
+
+export async function fetchPortfolioFinancials(
+  configs: Array<{ businessName: string; businessSlug: string; spreadsheetId: string }>,
+  accessToken: string,
+): Promise<BusinessFinancials[]> {
+  return Promise.all(
+    configs.map((c) =>
+      fetchBusinessFinancials(c.businessName, c.businessSlug, c.spreadsheetId, accessToken),
+    ),
+  );
 }

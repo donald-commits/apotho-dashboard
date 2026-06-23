@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getGoogleAccessToken, fetchFinancials } from "@/lib/google-sheets";
+import {
+  getGoogleAccessToken,
+  fetchBusinessFinancials,
+  fetchPortfolioFinancials,
+} from "@/lib/google-sheets";
 
-// Map business slugs to their Google Sheet IDs
-const SHEET_MAP: Record<string, string> = {
-  "evolution-drafting": process.env.EVOLUTION_SHEET_ID ?? "",
-  "sentri-homes": process.env.SENTRI_SHEET_ID ?? "",
+// Per-business sheet map. Each entry is one entity that has both MACU + AmEx tabs.
+const SHEET_MAP: Record<string, { name: string; sheetId: string }> = {
+  "evolution-drafting": {
+    name: "Evolution Drafting",
+    sheetId: process.env.EVOLUTION_SHEET_ID ?? "",
+  },
+  "sentri-homes": {
+    name: "Sentri Homes",
+    sheetId: process.env.SENTRI_SHEET_ID ?? "",
+  },
 };
 
 export async function GET(request: NextRequest) {
@@ -22,22 +32,35 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing slug parameter" }, { status: 400 });
   }
 
-  const sheetId = SHEET_MAP[slug];
-
-  if (!sheetId) {
-    return NextResponse.json(
-      { error: `No Google Sheet configured for business: ${slug}`, data: [] },
-      { status: 200 }
-    );
-  }
-
   try {
     const accessToken = await getGoogleAccessToken();
-    const financials = await fetchFinancials(sheetId, accessToken);
-    return NextResponse.json({ data: financials });
+
+    // Portfolio rollup: Apotho Improvements = sum of every configured subsidiary
+    if (slug === "apotho-improvements") {
+      const configs = Object.entries(SHEET_MAP)
+        .filter(([, cfg]) => !!cfg.sheetId)
+        .map(([s, cfg]) => ({
+          businessName: cfg.name,
+          businessSlug: s,
+          spreadsheetId: cfg.sheetId,
+        }));
+      const portfolio = await fetchPortfolioFinancials(configs, accessToken);
+      return NextResponse.json({ mode: "portfolio", portfolio });
+    }
+
+    // Single business
+    const cfg = SHEET_MAP[slug];
+    if (!cfg || !cfg.sheetId) {
+      return NextResponse.json(
+        { error: `No Google Sheet configured for business: ${slug}`, mode: "single", business: null },
+        { status: 200 },
+      );
+    }
+    const business = await fetchBusinessFinancials(cfg.name, slug, cfg.sheetId, accessToken);
+    return NextResponse.json({ mode: "single", business });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[financials API]", message);
-    return NextResponse.json({ error: message, data: [] }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
