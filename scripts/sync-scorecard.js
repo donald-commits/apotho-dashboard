@@ -150,7 +150,6 @@ async function syncEvolution(wStart, wEnd) {
   console.log("\n=== Evolution Drafting (Victor APIs + Stripe) ===");
   const IDS = {
     leads: "cmnghk4n2002eg0vp8xnlce1r",
-    totalLeads: "cmqa5wgq8003kcovptyvx0vlm",
     activeProjects: "cmqa5wgxn003mcovp0qkdpapb",
     leadsGoogle: "f2284634-c2a4-478e-8978-5cb9c7295063",
     leadsAngi: "679f09f3-16d6-4d98-b749-289c61653813",
@@ -222,14 +221,6 @@ async function syncEvolution(wStart, wEnd) {
     else if (src.includes("referral")) leadsReferral++;
   }
 
-  // Total leads (all-time client count)
-  let totalLeadsAllTime = 0;
-  try {
-    const tlRes = await fetch("https://victor-evo.vercel.app/api/v1/clients?limit=1", { headers: { Authorization: `Bearer ${VICTOR_KEY}` } });
-    const tlData = await tlRes.json();
-    totalLeadsAllTime = tlData.meta?.total || 0;
-  } catch {}
-
   // Active projects (exclude not_started and completed stages)
   let activeProjectCount = 0;
   try {
@@ -290,7 +281,6 @@ async function syncEvolution(wStart, wEnd) {
 
   // 5. Upsert all
   await upsert(IDS.leads, wStart, totalLeads);
-  await upsert(IDS.totalLeads, wStart, totalLeadsAllTime);
   await upsert(IDS.activeProjects, wStart, activeProjectCount);
   await upsert(IDS.leadsGoogle, wStart, leadsGoogle);
   await upsert(IDS.leadsAngi, wStart, leadsAngi);
@@ -313,7 +303,7 @@ async function syncEvolution(wStart, wEnd) {
   await upsert(IDS.angi, wStart, "3.6");
   await upsert(IDS.bbb, wStart, "1.0");
 
-  console.log(`  ${wStart}: leads=${totalLeads} (G=${leadsGoogle} A=${leadsAngi} M=${leadsMeta} T=${leadsThumbtack} W=${leadsWebsite} GMB=${leadsGMB} In=${leadsInbound} R=${leadsReferral}) ar=${ar}% cr=${cr}% sold=${sales} eng=${engSold} jobs=${jobs} finals=${finals} tt=${tt}d rev=$${Math.round(stripeRev)} upsell=$${Math.round(upsellCents / 100)} totalLeads=${totalLeadsAllTime} active=${activeProjectCount}`);
+  console.log(`  ${wStart}: leads=${totalLeads} (G=${leadsGoogle} A=${leadsAngi} M=${leadsMeta} T=${leadsThumbtack} W=${leadsWebsite} GMB=${leadsGMB} In=${leadsInbound} R=${leadsReferral}) ar=${ar}% cr=${cr}% sold=${sales} eng=${engSold} jobs=${jobs} finals=${finals} tt=${tt}d rev=$${Math.round(stripeRev)} upsell=$${Math.round(upsellCents / 100)} active=${activeProjectCount}`);
 }
 
 async function syncSentri(wStart, wEnd) {
