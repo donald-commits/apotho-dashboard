@@ -231,6 +231,26 @@ async function syncEvolution(wStart, wEnd) {
     }
   } catch {}
 
+  // Jobs completed: count projects where submittedAt is in this week (MDT boundaries)
+  console.log("  Counting jobs completed (submittedAt)...");
+  let jobsCompleted = 0;
+  try {
+    let jPage = 1, jDone = false;
+    while (!jDone && jPage < 50) {
+      const jRes = await fetch(
+        `https://victor-evo.vercel.app/api/v1/projects?limit=100&sort=updatedAt&order=desc&page=${jPage}`,
+        { headers: { Authorization: `Bearer ${VICTOR_KEY}` } }
+      );
+      const jData = await jRes.json();
+      for (const p of jData.data || []) {
+        if (p.updatedAt < cutoffDate.toISOString()) { jDone = true; break; }
+        if (p.submittedAt && p.submittedAt >= wStartUTC && p.submittedAt <= wEndUTC) jobsCompleted++;
+      }
+      if (!jData.data?.length || jPage >= (jData.meta?.totalPages || 1)) jDone = true;
+      jPage++;
+    }
+  } catch {}
+
   // 3. Fetch revenue for sales + finals
   console.log("  Fetching revenue...");
   const allRevenue = await paginateVictorDesc("revenue", "createdAt", cutoffISO);
@@ -251,8 +271,8 @@ async function syncEvolution(wStart, wEnd) {
   const finals = paidRevenue.filter(r => r.paymentType === "final").length;
   const engSold = paidRevenue.filter(r => r.paymentType === "engineering").length;
 
-  // Use scorecard for upsells, jobs, turnaround (complex business logic)
-  const jobs = sc.jobsCompleted;
+  // Use scorecard for upsells and turnaround; jobs from submittedAt count above
+  const jobs = jobsCompleted;
   const tt = sc.avgTurnaroundDays.toFixed(1);
   const upsellCents = sc.revenueFromUpsellsCents;
 
